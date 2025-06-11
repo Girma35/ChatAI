@@ -22,10 +22,12 @@ const streamChat = StreamChat.getInstance(
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
 // Middleware
+
 app.use(cors());
 app.use(express.json());
 
 // Root route
+
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello, World!");
 });
@@ -82,37 +84,24 @@ app.post("/register-user", async (req: Request, res: Response): Promise<any> => 
   }
 });
 
-// Update user role
-app.post("/update-role", async (req: Request, res: Response): Promise<any> => {
-  const { email, role } = req.body;
+// Check if user exists
+app.post("/check-user", async (req: Request, res: Response): Promise<any> => {
+  const { email } = req.body;
 
-  if (!email || !role) {
-    return res.status(400).json({ error: "Email and role are required." });
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
   }
 
   try {
     const userId = email.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-    console.log(`Updating role for userId: ${userId} to role: ${role}`);
-
     const userResponse = await streamChat.queryUsers({ id: { $eq: userId } });
-
-    if (userResponse.users.length === 0) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    await streamChat.partialUpdateUser({
-      id: userId,
-      set: { role },
-    });
-
-    console.log(`Role updated for userId: ${userId} to ${role}`);
-
-    return res.status(200).json({ message: `User role updated to ${role}.` });
+    return res.status(200).json({ exists: userResponse.users.length > 0 });
   } catch (error) {
-    console.error("Error updating user role:", error);
+    console.error("Error checking user:", error);
     return res.status(500).json({ error: "Internal server error." });
   }
 });
+
 
 // Chat with Gemini AI
 app.post("/chat", async (req: Request, res: Response): Promise<any> => {
@@ -127,10 +116,10 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
      const existingUser = await db
       .select()
       .from(users)
-      .where(eq(users.id, userId)); // Correct field usage
+      .where(eq(users.id, userId)); 
 
     if (!existingUser.length ) {
-      // user does not exist in the database
+      
         return res.status(404).json({ message: "User not found." });
       
     }
